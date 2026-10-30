@@ -21,7 +21,7 @@ function M.close_buffer(buf)
         vim.cmd.buffer(alt)
       else
         pcall(vim.cmd.bprevious)
-        if api.nvim_get_current_buf() == buf then vim.cmd.enew() end
+        if api.nvim_get_current_buf() == buf then require("config.welcome").show() end
       end
     end)
   end

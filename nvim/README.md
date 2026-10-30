@@ -3,7 +3,7 @@
 Run `nvim` in a project directory (or `nvim path/to/project`). The window is split into three parts:
 
 ```
- File  Edit  View  Go  Claude  Help                          project
+ File  Edit  View  Go  Git  Claude  Help                     project
  EXPLORER       │ a.txt ✕ │ b.py ● │          │ CLAUDE CODE
  ▾ src          │ (editor)                     │ (terminal)
    main.py      │                              │
@@ -14,7 +14,15 @@ The top row is a menu bar: click a name to open its menu (F10 opens File). Each 
 own row of tabs: click a tab to switch, click ✕ (● when unsaved) or middle-click to close.
 The clock is at the bottom right.
 
+It starts on a **welcome screen**: quick actions (new file, open file/folder, find in project, ask Claude,
+git panel), your recent files in this project and your recent projects. Click an entry or press the key
+shown next to it. Opening a recent project switches the file tree and Claude to that folder. The welcome
+screen also comes back when you close the last tab, and from Help > Welcome Screen.
+
 `nvim file.txt` opens just that file, without the panels (e.g. as the git commit editor).
+
+**Markdown** files are shown rendered: headings, bold, lists, checkboxes, tables and code blocks.
+The line with the cursor shows the raw text so you can edit it.
 
 The colors follow macOS: Xcode light in Light mode, Xcode dark in Dark mode. Switching the system
 appearance changes them within a few seconds. Claude Code's own colors are set with `/theme` inside the panel.
@@ -40,6 +48,7 @@ appearance changes them within a few seconds. Claude Code's own colors are set w
 | Ctrl+PageDown / PageUp | next / previous tab (or click) |
 | Ctrl+B | show / hide the file tree |
 | Ctrl+Q | quit |
+| F9 | git panel (lazygit; quit it with q) |
 | F10 | open the File menu |
 | Option+click, Shift+F10 | context menu: copy/paste and Claude actions |
 
@@ -70,10 +79,13 @@ When Claude edits a file:
 2. as soon as it is written, the change shows up in the buffer: new lines in green, removed lines in red below them,
 3. the highlight stays until you accept it, so consecutive edits add up and you see the whole diff since Claude started.
 
-Reviewing changes (also in the Claude menu and the context menu):
+Every change has **`✓ Accept`** and **`↺ Revert`** buttons at the end of its first line: click them.
+Accept keeps the change and removes the highlight; Revert puts the old lines back and saves the file.
 
-- `:ClaudeAccept` / `:ClaudeAcceptAll`: accept (hide the diff) in this file / everywhere
-- `:ClaudeRevertHunk`: revert the change under the cursor
+The same from the Claude menu, the context menu or commands:
+
+- `:ClaudeAcceptHunk` / `:ClaudeRevertHunk`: accept / revert the change under the cursor
+- `:ClaudeAccept` / `:ClaudeAcceptAll`: accept everything in this file / in all files
 - `:ClaudeRevert`: revert all Claude changes in the file
 - `:ClaudeChanges`: list all changes (quickfix)
 - Ctrl+Z right after a change undoes Claude's whole edit in the buffer, Ctrl+S writes that to disk
@@ -83,6 +95,14 @@ in which you have unsaved changes, nothing gets overwritten: you get a warning, 
 takes the version on disk.
 
 Changes Claude makes in other ways (Bash, formatters, git) are detected and highlighted in open files too.
+
+## Git
+
+F9 (or Git > Open Git Panel) opens lazygit in a window over the editor: stage, commit, push, switch
+branches, all clickable. Quit it with q; files it changes reload in the editor. It needs lazygit
+(`brew install lazygit`). The Git menu also has the per-line actions: next/previous change, preview,
+stage or discard a change, blame and a diff of the current file. Changed lines are marked in the
+left margin.
 
 ## Settings
 

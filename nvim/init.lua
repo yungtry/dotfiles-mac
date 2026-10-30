@@ -27,5 +27,6 @@ require("lazy").setup("plugins", {
 require("claude").setup()
 require("config.tabs").setup()
 require("config.menubar").setup()
+require("config.welcome").setup()
 require("config.keymaps")
 require("config.autocmds")

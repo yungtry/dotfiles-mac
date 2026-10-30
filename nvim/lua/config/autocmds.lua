@@ -78,6 +78,9 @@ au("VimEnter", {
         end
       end
     end, 300)
+    local welcome = require("config.welcome")
+    welcome.remember(vim.fn.getcwd())
+    welcome.show()
     local claude = require("claude")
     if claude.config.auto_open then claude.open(false) end
   end,

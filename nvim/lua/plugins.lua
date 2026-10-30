@@ -112,4 +112,18 @@ return {
   { "lewis6991/gitsigns.nvim", event = { "BufReadPost", "BufNewFile" }, opts = {} },
 
   { "windwp/nvim-autopairs", event = "InsertEnter", opts = {} },
+
+  -- Markdown shown rendered (headings, lists, checkboxes, tables, code blocks);
+  -- the line under the cursor shows the raw text so it can be edited
+  {
+    "MeanderingProgrammer/render-markdown.nvim",
+    ft = "markdown",
+    opts = {
+      render_modes = true, -- also in Insert mode (files open in Insert mode, see vim.g.modeless)
+      anti_conceal = { enabled = true },
+      heading = nerd and {} or { sign = false, icons = { "█ ", "▓ ", "▒ ", "░ ", "░ ", "░ " } },
+      code = nerd and {} or { sign = false, language_icon = false },
+      checkbox = nerd and {} or { unchecked = { icon = "☐ " }, checked = { icon = "☑ " } },
+    },
+  },
 }

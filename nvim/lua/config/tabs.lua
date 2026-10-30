@@ -3,7 +3,7 @@
 local M = {}
 local api = vim.api
 
-local titles = { ["neo-tree"] = "EXPLORER", claude = "CLAUDE CODE" }
+local titles = { ["neo-tree"] = "EXPLORER", claude = "CLAUDE CODE", welcome = "WELCOME" }
 local expr = "%!v:lua.require'config.tabs'.render()"
 
 local function listed()
@@ -96,7 +96,7 @@ local function attach(win)
   if not api.nvim_win_is_valid(win) or api.nvim_win_get_config(win).relative ~= "" then return end
   local buf = api.nvim_win_get_buf(win)
   local want = (vim.bo[buf].buftype == "" or titles[vim.bo[buf].filetype]) and expr or ""
-  if vim.wo[win].winbar ~= want then vim.wo[win].winbar = want end
+  if vim.wo[win].winbar ~= want then vim.wo[win][0].winbar = want end
 end
 
 local function set_hl()

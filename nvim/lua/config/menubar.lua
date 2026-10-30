@@ -3,7 +3,7 @@
 local M = {}
 local api = vim.api
 
-M.menus = { "File", "Edit", "View", "Go", "Claude", "Help" }
+M.menus = { "File", "Edit", "View", "Go", "Git", "Claude", "Help" }
 
 local function prompt(text, default, completion)
   local ok, value = pcall(vim.fn.input, { prompt = text, default = default or "", completion = completion })
@@ -14,9 +14,7 @@ end
 M.actions = {
   open_folder = function()
     local dir = prompt("Open folder: ", vim.fn.getcwd() .. "/", "dir")
-    if dir == "" or vim.fn.isdirectory(dir) == 0 then return end
-    vim.cmd.cd(vim.fn.fnameescape(dir))
-    vim.cmd("Neotree show dir=" .. vim.fn.fnameescape(vim.fn.getcwd()))
+    if dir ~= "" and vim.fn.isdirectory(dir) == 1 then require("config.welcome").open_project(dir) end
   end,
   save_as = function()
     local name = prompt("Save as: ", vim.fn.expand("%:p"), "file")
@@ -63,6 +61,7 @@ local function define()
   item("File", "Open File…", "Ctrl+P", "<Cmd>Telescope find_files<CR>")
   item("File", "Open Recent…", nil, "<Cmd>Telescope oldfiles<CR>")
   item("File", "Open Folder…", nil, a("open_folder"))
+  item("File", "Open Recent Project…", nil, "<Cmd>Welcome<CR>")
   sep("File", 1)
   item("File", "Save", "Ctrl+S", "<Cmd>lua require('config.util').save()<CR>")
   item("File", "Save As…", nil, a("save_as"))
@@ -109,6 +108,18 @@ local function define()
   item("Go", "Next Claude Change", "F7", "<Cmd>lua require('claude').next_change(1)<CR>")
   item("Go", "Previous Claude Change", "Shift+F7", "<Cmd>lua require('claude').next_change(-1)<CR>")
 
+  item("Git", "Open Git Panel", "F9", "<Cmd>lua require('config.git').open()<CR>")
+  sep("Git", 1)
+  item("Git", "Next Change", nil, "<Cmd>Gitsigns nav_hunk next<CR>")
+  item("Git", "Previous Change", nil, "<Cmd>Gitsigns nav_hunk prev<CR>")
+  item("Git", "Preview Change", nil, "<Cmd>Gitsigns preview_hunk<CR>")
+  item("Git", "Stage Change", nil, "<Cmd>Gitsigns stage_hunk<CR>")
+  item("Git", "Discard Change", nil, "<Cmd>Gitsigns reset_hunk<CR>")
+  sep("Git", 2)
+  item("Git", "Blame This Line", nil, "<Cmd>Gitsigns blame_line<CR>")
+  item("Git", "Toggle Inline Blame", nil, "<Cmd>Gitsigns toggle_current_line_blame<CR>")
+  item("Git", "Diff This File", nil, "<Cmd>Gitsigns diffthis<CR>")
+
   item("Claude", "Focus Claude", "Ctrl+\\", "<Cmd>Claude<CR>")
   item("Claude", "Show/Hide Panel", "F12", "<Cmd>ClaudeToggle<CR>")
   item("Claude", "Panel Width…", nil, a("panel_width"))
@@ -120,9 +131,11 @@ local function define()
   item("Claude", "List Changes", nil, "<Cmd>ClaudeChanges<CR>")
   item("Claude", "Accept Changes in File", nil, "<Cmd>ClaudeAccept<CR>")
   item("Claude", "Accept All Changes", nil, "<Cmd>ClaudeAcceptAll<CR>")
+  item("Claude", "Accept This Change", nil, "<Cmd>ClaudeAcceptHunk<CR>")
   item("Claude", "Revert This Change", nil, "<Cmd>ClaudeRevertHunk<CR>")
   item("Claude", "Revert Whole File", nil, "<Cmd>ClaudeRevert<CR>")
 
+  item("Help", "Welcome Screen", nil, "<Cmd>Welcome<CR>")
   item("Help", "Keyboard Shortcuts", nil, "<Cmd>Shortcuts<CR>")
   item("Help", "Neovim Help", nil, "<Cmd>help<CR>")
 end

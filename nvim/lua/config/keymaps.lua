@@ -65,6 +65,7 @@ map({ "n", "i" }, "<C-PageDown>", function() tabs.cycle(1) end, { desc = "Next t
 map({ "n", "i" }, "<C-PageUp>", function() tabs.cycle(-1) end, { desc = "Previous tab" })
 map("n", "<Tab>", function() tabs.cycle(1) end, { desc = "Next tab" })
 map("n", "<S-Tab>", function() tabs.cycle(-1) end, { desc = "Previous tab" })
+map({ "n", "i", "v", "t" }, "<F9>", function() require("config.git").open() end, { desc = "Git panel" })
 map(all, "<F10>", function() require("config.menubar").open("File") end, { desc = "Open the File menu" })
 map({ "n", "i", "v" }, "<C-b>", "<Cmd>Neotree toggle<CR>", { desc = "Toggle file tree" })
 
@@ -72,6 +73,7 @@ map({ "n", "i", "v" }, "<C-b>", "<Cmd>Neotree toggle<CR>", { desc = "Toggle file
 map({ "n", "i", "t" }, "<C-\\>", claude.focus_toggle, { desc = "Switch focus: editor ⇄ Claude" })
 map("v", "<C-\\>", ":ClaudeSend<CR>", { silent = true, desc = "Send selection to Claude" })
 map({ "n", "i", "t" }, "<F12>", claude.toggle, { desc = "Show/hide the Claude panel" })
+map({ "n", "i" }, "<LeftRelease>", function() claude.click() end, { desc = "Click Accept/Revert buttons" })
 map({ "n", "i" }, "<F7>", function() claude.next_change(1) end, { desc = "Next Claude change" })
 map({ "n", "i" }, "<S-F7>", function() claude.next_change(-1) end, { desc = "Previous Claude change" })
 map("n", "]c", function() claude.next_change(1) end, { desc = "Next Claude change" })
@@ -102,6 +104,7 @@ vim.cmd([[
   vnoremenu PopUp.Claude:\ Send\ Selection         :ClaudeSend<CR>
   anoremenu PopUp.Claude:\ Next\ Change            <Cmd>lua require("claude").next_change(1)<CR>
   anoremenu PopUp.Claude:\ Accept\ Changes         <Cmd>ClaudeAccept<CR>
+  anoremenu PopUp.Claude:\ Accept\ This\ Change    <Cmd>ClaudeAcceptHunk<CR>
   anoremenu PopUp.Claude:\ Revert\ This\ Change    <Cmd>ClaudeRevertHunk<CR>
   anoremenu PopUp.Claude:\ Revert\ Whole\ File     <Cmd>ClaudeRevert<CR>
   anoremenu PopUp.Claude:\ List\ Changes           <Cmd>ClaudeChanges<CR>

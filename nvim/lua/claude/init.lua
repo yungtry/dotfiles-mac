@@ -108,7 +108,8 @@ local function is_editor_win(win)
   if not (win and api.nvim_win_is_valid(win)) then return false end
   if api.nvim_win_get_config(win).relative ~= "" then return false end
   if api.nvim_win_get_tabpage(win) ~= api.nvim_get_current_tabpage() then return false end
-  return vim.bo[api.nvim_win_get_buf(win)].buftype == ""
+  local buf = api.nvim_win_get_buf(win)
+  return vim.bo[buf].buftype == "" or vim.bo[buf].filetype == "welcome"
 end
 
 -- panel width in columns: the last width you dragged it to, or config.width
@@ -193,6 +194,12 @@ end
 -- live diff
 ---------------------------------------------------------------------------
 
+local BUTTON_OFFSET = 1 -- Neovim leaves one cell between the end of the text and eol virtual text
+local BUTTONS = {
+  { text = " ✓ Accept ", action = "accept" },
+  { text = " ↺ Revert ", action = "revert" },
+}
+
 local function render(buf)
   api.nvim_buf_clear_namespace(buf, ns, 0, -1)
   local r = reviews[buf]
@@ -206,7 +213,8 @@ local function render(buf)
   local width = math.max(vim.o.columns, 80)
   local tab = string.rep(" ", vim.bo[buf].tabstop)
   local max = M.config.max_deleted_lines
-  for _, h in ipairs(r.hunks) do
+  r.buttons = {}
+  for idx, h in ipairs(r.hunks) do
     local sa, ca, sb, cb = h[1], h[2], h[3], h[4]
     for l = sb, sb + cb - 1 do
       api.nvim_buf_set_extmark(buf, ns, l - 1, 0, { line_hl_group = "ClaudeAdd", number_hl_group = "ClaudeAddNr", priority = 50 })
@@ -229,6 +237,16 @@ local function render(buf)
         row, above = math.max(#cur - 1, 0), false
       end
       api.nvim_buf_set_extmark(buf, ns, row, 0, { virt_lines = virt, virt_lines_above = above })
+    end
+    -- clickable [Accept] [Revert] after the first line of the change (see M.click)
+    local row = cb > 0 and sb - 1 or math.max(math.min(sb, #cur - 1), 0)
+    if not r.buttons[row + 1] then
+      r.buttons[row + 1] = idx
+      api.nvim_buf_set_extmark(buf, ns, row, 0, {
+        virt_text = { { " " }, { BUTTONS[1].text, "ClaudeButtonAccept" }, { " " }, { BUTTONS[2].text, "ClaudeButtonRevert" } },
+        virt_text_pos = "eol",
+        hl_mode = "combine",
+      })
     end
   end
 end
@@ -415,6 +433,7 @@ function M.open(focus)
       api.nvim_create_autocmd({ "BufEnter", "WinEnter" }, {
         buffer = buf,
         callback = function()
+          term.used = true
           if M.config.autosave then M.save_all() end
           vim.cmd.startinsert()
         end,
@@ -422,7 +441,7 @@ function M.open(focus)
       -- after scrolling with the wheel: click to type again
       vim.keymap.set("n", "<LeftRelease>", "<Cmd>startinsert<CR>", { buffer = buf })
     end
-    local wo = vim.wo[win]
+    local wo = vim.wo[win][0] -- [0]: this window only, like :setlocal
     wo.number, wo.relativenumber, wo.signcolumn = false, false, "no"
     wo.cursorline, wo.scrolloff, wo.sidescrolloff = false, 0, 0
     wo.winfixwidth, wo.winfixbuf = true, true
@@ -446,6 +465,20 @@ function M.save_all()
       end
     end
   end
+end
+
+-- start Claude again in the current directory (after switching projects).
+-- Asks first if you've already used the running session.
+function M.restart_here()
+  if not job_alive() then return end
+  local where = vim.fn.fnamemodify(vim.fn.getcwd(), ":~")
+  if term.used and vim.fn.confirm("Restart Claude in " .. where .. "?", "&Yes\n&No", 1) ~= 1 then return end
+  local visible = claude_win() ~= nil
+  vim.fn.jobstop(term.job)
+  vim.wait(2000, function() return not job_alive() end)
+  if term.buf and api.nvim_buf_is_valid(term.buf) then pcall(api.nvim_buf_delete, term.buf, { force = true }) end
+  term.used = false
+  if visible then M.open(false) end
 end
 
 -- Ctrl+\ : editor ⇄ Claude
@@ -564,28 +597,84 @@ function M.revert(buf)
   M.accept(buf)
 end
 
-function M.revert_hunk()
-  local buf = api.nvim_get_current_buf()
+-- put the old lines of one change back and save
+local function revert_at(buf, h)
   local r = reviews[buf]
-  if not r then return vim.notify("No Claude changes in this file") end
+  local sa, ca, sb, cb = h[1], h[2], h[3], h[4]
+  local old = vim.list_slice(r.base, sa, sa + ca - 1)
+  if cb == 0 then
+    api.nvim_buf_set_lines(buf, sb, sb, false, old)
+  else
+    api.nvim_buf_set_lines(buf, sb - 1, sb - 1 + cb, false, old)
+  end
+  write(buf)
+  render(buf)
+end
+
+-- keep one change: copy its new lines into the base so it no longer shows as a diff
+local function accept_at(buf, h)
+  local r = reviews[buf]
+  local sa, ca, sb, cb = h[1], h[2], h[3], h[4]
+  local cur = buf_lines(buf)
+  local base = vim.list_slice(r.base, 1, sa + (ca == 0 and 0 or -1))
+  vim.list_extend(base, vim.list_slice(cur, sb, sb + cb - 1))
+  vim.list_extend(base, vim.list_slice(r.base, sa + ca + (ca == 0 and 1 or 0)))
+  r.base = base
+  render(buf)
+end
+
+local function hunk_at_cursor(buf)
+  local r = reviews[buf]
+  if not r then return end
   local line = api.nvim_win_get_cursor(0)[1]
   for _, h in ipairs(r.hunks) do
-    local sa, ca, sb, cb = h[1], h[2], h[3], h[4]
     local first, last = hunk_range(h)
-    if cb == 0 then first = sb end
-    if line >= first and line <= last then
-      local old = vim.list_slice(r.base, sa, sa + ca - 1)
-      if cb == 0 then
-        api.nvim_buf_set_lines(buf, sb, sb, false, old)
-      else
-        api.nvim_buf_set_lines(buf, sb - 1, sb - 1 + cb, false, old)
-      end
-      write(buf)
-      render(buf)
-      return
-    end
+    if h[4] == 0 then first = h[3] end
+    if line >= first and line <= last then return h end
   end
-  vim.notify("The cursor is not on a Claude change")
+end
+
+function M.revert_hunk()
+  local buf = api.nvim_get_current_buf()
+  if not reviews[buf] then return vim.notify("No Claude changes in this file") end
+  local h = hunk_at_cursor(buf)
+  if not h then return vim.notify("The cursor is not on a Claude change") end
+  revert_at(buf, h)
+end
+
+function M.accept_hunk()
+  local buf = api.nvim_get_current_buf()
+  if not reviews[buf] then return vim.notify("No Claude changes in this file") end
+  local h = hunk_at_cursor(buf)
+  if not h then return vim.notify("The cursor is not on a Claude change") end
+  accept_at(buf, h)
+end
+
+-- mouse release: was it on one of the [Accept] [Revert] buttons drawn after a line?
+-- Returns true when it handled the click.
+function M.click()
+  local pos = vim.fn.getmousepos()
+  if pos.winid == 0 or pos.line == 0 then return false end
+  local buf = api.nvim_win_get_buf(pos.winid)
+  local r = reviews[buf]
+  local idx = r and r.buttons and r.buttons[pos.line]
+  if not idx then return false end
+  local info = vim.fn.getwininfo(pos.winid)[1]
+  local leftcol = api.nvim_win_call(pos.winid, function() return vim.fn.winsaveview().leftcol end)
+  local text = api.nvim_buf_get_lines(buf, pos.line - 1, pos.line, false)[1] or ""
+  -- cells past the end of the text, counting from 1
+  local past = pos.wincol - info.textoff + leftcol - vim.fn.strdisplaywidth(text)
+  local start = BUTTON_OFFSET + 1 -- the " " chunk before the first button
+  for _, b in ipairs(BUTTONS) do
+    local w = vim.fn.strdisplaywidth(b.text)
+    if past > start and past <= start + w then
+      local h = r.hunks[idx]
+      if b.action == "accept" then accept_at(buf, h) else revert_at(buf, h) end
+      return true
+    end
+    start = start + w + 1
+  end
+  return false
 end
 
 function M.list()
@@ -647,13 +736,23 @@ end
 
 local function set_hl()
   local function hl(name, opts)
-    opts.default = true
+    if opts.link then opts.default = true end
     api.nvim_set_hl(0, name, opts)
   end
   hl("ClaudeAdd", { link = "DiffAdd" })
   hl("ClaudeAddNr", { link = "Added" })
   hl("ClaudeDelete", { link = "DiffDelete" })
   hl("ClaudeFlash", { link = "Visual" })
+  -- solid "pill" buttons in the theme's green and red
+  local function color(names, key)
+    for _, n in ipairs(names) do
+      local c = api.nvim_get_hl(0, { name = n, link = false })[key]
+      if c then return c end
+    end
+  end
+  local bg = color({ "Normal" }, "bg")
+  hl("ClaudeButtonAccept", { fg = bg, bg = color({ "Added", "DiagnosticOk", "String" }, "fg"), bold = true })
+  hl("ClaudeButtonRevert", { fg = bg, bg = color({ "Removed", "DiagnosticError", "ErrorMsg" }, "fg"), bold = true })
 end
 
 function M.setup(opts)
@@ -731,6 +830,7 @@ function M.setup(opts)
   cmd("ClaudeAcceptAll", M.accept_all, { desc = "Accept all changes" })
   cmd("ClaudeRevert", function() M.revert() end, { desc = "Revert all Claude changes in this file" })
   cmd("ClaudeRevertHunk", M.revert_hunk, { desc = "Revert the change under the cursor" })
+  cmd("ClaudeAcceptHunk", M.accept_hunk, { desc = "Accept the change under the cursor" })
   cmd("ClaudeChanges", M.list, { desc = "List Claude changes" })
   cmd("ClaudeReload", function()
     local buf = api.nvim_get_current_buf()
