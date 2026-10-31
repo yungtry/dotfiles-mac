@@ -91,6 +91,7 @@ local function define()
   item("View", "Command Palette…", "F1", "<Cmd>Telescope commands<CR>")
   item("View", "File Tree", "Ctrl+B", "<Cmd>Neotree toggle<CR>")
   item("View", "Claude Panel", "F12", "<Cmd>ClaudeToggle<CR>")
+  item("View", "Terminal", "Ctrl+`", "<Cmd>lua require('config.terminal').toggle()<CR>")
   sep("View", 1)
   item("View", "Word Wrap", nil, "<Cmd>setlocal wrap! linebreak!<CR>")
   item("View", "Line Numbers", nil, "<Cmd>setlocal number!<CR>")
@@ -140,13 +141,19 @@ local function define()
   item("Help", "Neovim Help", nil, "<Cmd>help<CR>")
 end
 
--- open a menu; the editor window gets focus so the menu acts on the file
+-- screen column where each menu's name starts in the bar, filled by render()
+local cols = {}
+
+-- open a menu under its name; the editor window gets focus so the menu acts on the file.
+-- :popup! opens at the mouse, so the mouse is moved onto the name first (plain :popup
+-- would open it at the text cursor).
 function M.open(name)
   if vim.bo.buftype ~= "" then
     local win = require("claude").editor_win()
     if win then api.nvim_set_current_win(win) end
   end
-  vim.schedule(function() pcall(vim.cmd, "popup " .. name) end)
+  api.nvim_input_mouse("move", "", "", 0, 0, cols[name] or 0)
+  vim.schedule(function() pcall(vim.cmd, "popup! " .. name) end)
 end
 
 function _G.MenuBarClick(i)
@@ -155,7 +162,10 @@ end
 
 function M.render()
   local out = { "%#MenuBar# " }
+  local col = 1
   for i, name in ipairs(M.menus) do
+    cols[name] = col
+    col = col + vim.fn.strdisplaywidth(name) + 2
     out[#out + 1] = "%" .. i .. "@v:lua.MenuBarClick@ " .. name .. " %X"
   end
   out[#out + 1] = "%=%#MenuBarTitle#" .. vim.fn.fnamemodify(vim.fn.getcwd(), ":t") .. " "

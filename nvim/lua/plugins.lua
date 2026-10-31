@@ -82,6 +82,7 @@ return {
         },
         lualine_z = {
           "location",
+          { function() return require("config.nowplaying").status() end },
           { function() return os.date("%H:%M") end },
         },
       },

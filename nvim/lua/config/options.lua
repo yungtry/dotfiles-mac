@@ -9,6 +9,10 @@ vim.g.have_nerd_font = false
 -- Esc still switches to Vim's Normal mode.
 vim.g.modeless = true
 
+-- true: the song/video playing on the Mac is shown left of the clock (when there's room).
+-- Install `brew install media-control` to see every player; without it only Music and Spotify.
+vim.g.now_playing = true
+
 -- the file tree replaces netrw
 vim.g.loaded_netrw = 1
 vim.g.loaded_netrwPlugin = 1

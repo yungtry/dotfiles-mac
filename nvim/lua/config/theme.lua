@@ -1,8 +1,8 @@
--- Xcode colors that follow the macOS light/dark appearance
+-- i3 colors in dark mode, Xcode colors in light mode, following the macOS appearance
 -- (or a fixed light/dark choice from View > Theme, remembered across restarts).
 local M = {}
 
-M.dark = "xcodedark"
+M.dark = "i3"
 M.light = "xcodelight"
 
 local mode_file = vim.fn.stdpath("state") .. "/theme-mode"

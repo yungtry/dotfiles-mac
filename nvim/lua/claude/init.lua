@@ -492,16 +492,19 @@ function M.focus_toggle()
   end
 end
 
--- F12 : show / hide the panel (Claude keeps running in the background)
-function M.toggle()
+-- hide the panel; Claude keeps running in the background
+function M.hide()
   local win = claude_win()
-  if win and #api.nvim_tabpage_list_wins(0) > 1 then
-    if api.nvim_get_current_win() == win then vim.cmd.stopinsert() end
-    save_width(api.nvim_win_get_width(win))
-    api.nvim_win_hide(win)
-  else
-    M.open(true)
-  end
+  if not win or #api.nvim_tabpage_list_wins(0) == 1 then return false end
+  if api.nvim_get_current_win() == win then vim.cmd.stopinsert() end
+  save_width(api.nvim_win_get_width(win))
+  api.nvim_win_hide(win)
+  return true
+end
+
+-- F12 : show / hide the panel
+function M.toggle()
+  if not M.hide() then M.open(true) end
 end
 
 -- :ClaudeWidth 80 / 40% / (nothing = default)

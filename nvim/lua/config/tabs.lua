@@ -1,10 +1,16 @@
 -- File tabs in a bar above each editor window (the top row of the screen is the menu bar).
--- The file tree and the Claude panel get a title in the same row instead.
+-- The file tree, the Claude panel and the terminal get a title in the same row instead.
 local M = {}
 local api = vim.api
 
-local titles = { ["neo-tree"] = "EXPLORER", claude = "CLAUDE CODE", welcome = "WELCOME" }
+local titles = { ["neo-tree"] = "EXPLORER", claude = "CLAUDE CODE", welcome = "WELCOME", terminal = "TERMINAL" }
 local expr = "%!v:lua.require'config.tabs'.render()"
+
+-- panels with a ✕ in their title bar; it hides them, the same as F12 / Ctrl+`
+local panels = {
+  claude = function() require("claude").hide() end,
+  terminal = function() require("config.terminal").hide() end,
+}
 
 local function listed()
   return vim.tbl_filter(function(b) return vim.bo[b].buflisted end, api.nvim_list_bufs())
@@ -30,7 +36,10 @@ function M.render()
   local win = vim.g.statusline_winid
   local cur = api.nvim_win_get_buf(win)
   local title = titles[vim.bo[cur].filetype]
-  if title then return "%#TabTitle# " .. title .. "%#TabFill#" end
+  if title then
+    local close = panels[vim.bo[cur].filetype] and "%=%#TabTitle#%" .. win .. "@v:lua.PanelClose@ ✕ %X" or ""
+    return "%#TabTitle# " .. title .. "%#TabFill#" .. close
+  end
 
   local bufs = listed()
   local names = labels(bufs)
@@ -77,6 +86,13 @@ end
 
 function _G.TabClose(buf)
   vim.schedule(function() require("config.util").close_buffer(buf) end)
+end
+
+-- minwid = the panel's window
+function _G.PanelClose(win)
+  if not api.nvim_win_is_valid(win) then return end
+  local hide = panels[vim.bo[api.nvim_win_get_buf(win)].filetype]
+  if hide then vim.schedule(hide) end
 end
 
 -- next / previous tab in the current window

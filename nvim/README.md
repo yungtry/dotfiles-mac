@@ -12,7 +12,9 @@ Run `nvim` in a project directory (or `nvim path/to/project`). The window is spl
 
 The top row is a menu bar: click a name to open its menu (F10 opens File). Each editor has its
 own row of tabs: click a tab to switch, click ✕ (● when unsaved) or middle-click to close.
-The clock is at the bottom right.
+The clock is at the bottom right. Left of it is what's playing on the Mac (when there's room);
+`vim.g.now_playing` in `lua/config/options.lua` turns it off. For every player (browsers, Podcasts...)
+install `brew install media-control`; without it only Music and Spotify are shown.
 
 It starts on a **welcome screen**: quick actions (new file, open file/folder, find in project, ask Claude,
 git panel), your recent files in this project and your recent projects. Click an entry or press the key
@@ -47,6 +49,7 @@ appearance changes them within a few seconds. Claude Code's own colors are set w
 | Ctrl+W | close tab |
 | Ctrl+PageDown / PageUp | next / previous tab (or click) |
 | Ctrl+B | show / hide the file tree |
+| Ctrl+` | terminal panel below the editor: show, focus, hide (Ctrl+Space where Ctrl+` doesn't get through) |
 | Ctrl+Q | quit |
 | F9 | git panel (lazygit; quit it with q) |
 | F10 | open the File menu |
@@ -104,6 +107,12 @@ branches, all clickable. Quit it with q; files it changes reload in the editor. 
 stage or discard a change, blame and a diff of the current file. Changed lines are marked in the
 left margin.
 
+## Terminal
+
+Ctrl+` (or View > Terminal) opens a shell in a panel below the editor, in the project folder.
+Pressed again it hides the panel (the shell keeps running); from the editor it jumps back into it.
+Drag the border to resize it, the height is kept while Neovim runs. `exit` closes it.
+
 ## Settings
 
 - `lua/config/options.lua`: `vim.g.have_nerd_font = true` after installing a Nerd Font
@@ -111,7 +120,7 @@ left margin.
   `vim.g.modeless = false` turns off automatic typing mode.
 - View > Theme: follow the system, or always light / dark (remembered).
 - `lua/config/menubar.lua`: the menus; add your own with another `item(...)` line.
-- `lua/config/theme.lua`: the light/dark color schemes (`xcodelight`, `xcodedark`, also `xcodelighthc`,
-  `xcodedarkhc`, `xcodewwdc`).
+- `lua/config/theme.lua`: the light/dark color schemes (dark: `i3`, the i3 window manager's default colors,
+  in `colors/i3.lua`; light: `xcodelight`; also `xcodedark`, `xcodelighthc`, `xcodedarkhc`, `xcodewwdc`).
 - `require("claude").setup({...})` in `init.lua`: `width`, `follow` (jump to files Claude edits),
   `autosave`, `auto_open`, `cmd` (e.g. `{ "claude", "--continue" }`).

@@ -68,6 +68,10 @@ map("n", "<S-Tab>", function() tabs.cycle(-1) end, { desc = "Previous tab" })
 map({ "n", "i", "v", "t" }, "<F9>", function() require("config.git").open() end, { desc = "Git panel" })
 map(all, "<F10>", function() require("config.menubar").open("File") end, { desc = "Open the File menu" })
 map({ "n", "i", "v" }, "<C-b>", "<Cmd>Neotree toggle<CR>", { desc = "Toggle file tree" })
+-- Ctrl+` (terminals that can't send it send Ctrl+@, which is also Ctrl+Space)
+for _, key in ipairs({ "<C-`>", "<C-@>" }) do
+  map({ "n", "i", "v", "t" }, key, function() require("config.terminal").toggle() end, { desc = "Terminal panel" })
+end
 
 -- Claude
 map({ "n", "i", "t" }, "<C-\\>", claude.focus_toggle, { desc = "Switch focus: editor ⇄ Claude" })

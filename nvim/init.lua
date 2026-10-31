@@ -12,7 +12,7 @@ vim.opt.rtp:prepend(lazypath)
 
 local nerd = vim.g.have_nerd_font
 require("lazy").setup("plugins", {
-  install = { colorscheme = { "xcodedark", "habamax" } },
+  install = { colorscheme = { "i3", "habamax" } },
   change_detection = { notify = false },
   ui = {
     border = "rounded",
